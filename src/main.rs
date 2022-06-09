@@ -12,9 +12,11 @@ fn main() -> Result<()> {
   let note_re = Regex::new(r"^note: (.+)$").unwrap();
   let warning_re = Regex::new(r"^.*warning: (.+)$").unwrap();
   let standard_warning_re = Regex::new(r"\[-W(.+)\]").unwrap();
+  let build_failed_re = Regex::new(r"\*\* BUILD FAILED \*\*").unwrap();
+  let error_re = Regex::new(r"^.*error: (.+)$").unwrap();
   let warnings_re = [
     WarningRegex {
-      name: "multiple_groups_file_ref".to_string(),
+      name: "MYmultiple_groups_file_ref".to_string(),
       re: Regex::new(r"The file reference for .+ is a member of multiple groups \(.+ and .+\); this indicates a malformed project\.  Only the membership in one of the groups will be preserved \(but membership in targets will be unaffected\)\.  If you want a reference to the same file in more than one group, please add another reference to the same path\.").unwrap(),
     },
     WarningRegex {
@@ -66,19 +68,30 @@ fn main() -> Result<()> {
   let mut total_warnings = 0;
   let mut unknown_warnings = 0;
   let mut warning_counts = HashMap::new();
+  let mut errors = Vec::new();
   let stdin = stdin();
   let reader = BufReader::new(stdin);
+  let mut build_failed = false;
   reader
     .lines()
     .filter_map(|line| line.ok())
     .filter(|line| note_re.is_match(line) || warning_re.is_match(line))
     .for_each(|line| {
+      if build_failed_re.is_match(line.as_str()) {
+        build_failed = true;
+      }
       match note_re.captures(line.as_str()) {
         Some(cap) => {
           println!("\x1b[1m[note]:\x1b[0m {}", &cap[1]);
         },
         None => {},
       }
+      match error_re.captures(line.as_str()) {
+        Some(cap) => {
+          errors.push(cap[1].to_string());
+        },
+        None => {},
+      }    
       match warning_re.captures(line.as_str()) {
         Some(cap) => {
           total_warnings += 1;
@@ -119,6 +132,11 @@ fn main() -> Result<()> {
   println!("\x1b[1m  Unknown warnings: \x1b[0m{}", unknown_warnings);
   println!("\x1b[1m  Total warnings: \x1b[0m{}", total_warnings);
   
-  
+  if build_failed {
+    println!("\x1b[1mBuild failed\x1b[0m");
+    for error in errors {
+      println!("  {}", error);
+    }
+  }
   Ok(())
 }

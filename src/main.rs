@@ -57,7 +57,7 @@ fn main() -> Result<()> {
     },
     WarningRegex {
       name: "MYunassigned_children".to_string(),
-      re: Regex::new(r"The launch image set .+ has \d+ unassigned children\.").unwrap(),
+      re: Regex::new(r"The .+ set .+ has \d+ unassigned children\.").unwrap(),
     },
     WarningRegex {
       name: "MYunnecessary_check".to_string(),
